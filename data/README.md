@@ -1,10 +1,23 @@
 # data/
 
-Local datasets stored on disk for development and experiments.  
-Files in this directory are not tracked by Git.
+The tracked reproduction artifacts are:
 
-Current Data is downloaded from the LeetCodeDataset on Hugging Face:  
-https://huggingface.co/datasets/newfacade/LeetCodeDataset
+- `experiment_problems_2000.jsonl.gz`: fields consumed by the experiment for
+  2,000 problems in fixed order;
+- `experiment_problems_2000_manifest.csv`: task IDs, difficulty, paper-run flag,
+  and per-record content hashes;
+- `experiment_problems_2000_provenance.json`: source and artifact hashes.
 
-This directory is populated automatically by the data loading pipeline
-when the dataset is not found locally.
+Indices 0-199 are the exact problem order scheduled in the submitted paper run.
+Indices 200-1999 are an optional extension. The snapshot was derived from the
+local `train_shuffled.jsonl` created with random seed 42.
+
+The source is
+[newfacade/LeetCodeDataset](https://huggingface.co/datasets/newfacade/LeetCodeDataset),
+licensed Apache-2.0. Full downloaded and shuffled source files remain ignored by
+Git. The tracked subset can be rebuilt, when the original ignored source is
+present, with:
+
+```powershell
+python -m scripts.build_experiment_snapshot
+```

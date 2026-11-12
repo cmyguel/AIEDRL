@@ -1,5 +1,6 @@
 data/**.csv
 data/**.jsonl
+!data/experiment_problems_2000_manifest.csv
 
 secrets/**.env
 .vscode/
