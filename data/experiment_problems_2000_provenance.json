@@ -1,0 +1,16 @@
+﻿{
+    "created_at":  "2026-11-11T17:29:02.3136807-07:00",
+    "source_file":  "train_shuffled.jsonl",
+    "source_sha256":  "c4cf0aae9b9b75f8bdd9364c92cdf7ad07af287e9b78d68f9bba4551b40beb5a",
+    "snapshot_file":  "experiment_problems_2000.jsonl.gz",
+    "snapshot_sha256":  "d572b41e5f5c0a4be9e78f943387bed71ef04b662e84d6d7f7362612dc4d9b0f",
+    "manifest_file":  "experiment_problems_2000_manifest.csv",
+    "manifest_sha256":  "902679db778c1c971c0236a49beb75f7dcdc69ced92f82999054d516cffe3383",
+    "record_count":  2000,
+    "paper_run_indices":  [
+                              0,
+                              199
+                          ],
+    "source_dataset":  "newfacade/LeetCodeDataset",
+    "source_license":  "Apache-2.0"
+}

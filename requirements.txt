@@ -1,15 +1,28 @@
-# Python 3.12.12 | packaged by Anaconda, Inc. | (main, Oct 21 2025, 20:05:38) [MSC v.1929 64 bit (AMD64)] on win32
+# Runtime tested for Python 3.12. The historical run did not preserve a complete
+# lockfile; new runs record the concrete installed versions in run_metadata.json.
+numpy>=2.0,<3
+pandas>=2.2,<3
+datasets>=3,<5
+python-dotenv>=1,<2
+tqdm>=4.66,<5
 
-pandas
-datasets # access Huggingface data
-itables
-langchain>=1.2.7
-langchain-openai
+# Agent stack
+langchain>=1.2.7,<2
+langchain-openai>=1,<2
+pydantic>=2,<3
+
+# Reward model and dataset helpers
 scikit-learn==1.8.0
-# code dependencies
-sortedcontainers
-# results analysis
+sortedcontainers>=2.4,<3
+
+# Notebook and analysis
+ipykernel>=6,<8
+jupyterlab>=4,<5
+itables>=2,<3
 seaborn==0.13.2
 plotly==6.0.0
-nbformat # required by plotly
-kaleido # plotly, for rendering for pdf
+nbformat>=5,<6
+kaleido>=1,<2
+
+# Offline verification
+pytest>=8,<10

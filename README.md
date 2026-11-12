@@ -1,59 +1,97 @@
 # AIEDRL
-A reinforcement learning for optimize AI agents for learning
 
-## Installation
-```bash
-conda env create -f environment.yml
-conda activate rlhf
-```
+AIEDRL is a simulated programming-tutoring experiment. A lightweight reward
+model selects one of three pedagogical actions for a fixed LLM tutor:
 
-## Selected Recent Papers on RL for AI tutors
+- `SOCRATIC_PROBE`
+- `CONCEPTUAL_HINT`
+- `STRUCTURAL_SCAFFOLD`
 
-1. **Dinucu-Jianu, D., Macina, J., Daheim, N., Hakimi, I., Gurevych, I., & Sachan, M. (2025).**  
-   *From Problem-Solving to Teaching Problem-Solving: Aligning LLMs with Pedagogy using Reinforcement Learning.*  
-   [_arXiv:2505.15607_](https://arxiv.org/abs/2505.15607)
+The project does **not** fine-tune the tutor or student language models. It is a
+contextual, per-turn action controller evaluated in a synthetic environment.
 
-2. **Schmucker, R., Pachapurkar, N., Bala, S., Shah, M., & Mitchell, T. (2025).**  
-   *Learning to Optimize Feedback for One Million Students: Insights from Multi-Armed and Contextual Bandits in Large-Scale Online Tutoring.*  
-   [_arXiv:2508.00270_](https://arxiv.org/abs/2508.00270)
+## Reproduce the submitted experiment
 
-3. **Xia, Y., Shen, W., Wang, Y., Liu, J. K., Sun, H., Wu, S., … & Xu, X. (2025).**  
-   *LeetCodeDataset: A Temporal Dataset for Robust Evaluation and Efficient Training of Code LLMs.*  
-   [_arXiv:2504.14655_](https://arxiv.org/abs/2504.14655)
+The supported workflow is supervised because external model calls and generated
+student code can fail or become inefficient.
 
-4. **Macina, J., Daheim, N., Hakimi, I., Kapur, M., Gurevych, I., & Sachan, M. (2025).**  
-   *MathTutorBench: A Benchmark for Measuring Open-Ended Pedagogical Capabilities of LLM Tutors.*  
-   [_arXiv:2502.18940_](https://arxiv.org/abs/2502.18940)
+1. Create the environment:
 
-5. **Riedmann, A., Schaper, P., & Lugrin, B. (2025).**  
-   *Reinforcement learning in education: A systematic literature review.*  
-   *International Journal of Artificial Intelligence in Education*, 1–55.  
-   [_SpringerLink_](https://link.springer.com/article/10.1007/s40593-025-00494-6)
-   
-6. **Scarlatos, A., Liu, N., Lee, J., Baraniuk, R., & Lan, A. (2025).**  
-   *Training LLM-Based Tutors to Improve Student Learning Outcomes in Dialogues.*  
-   In: Cristea, A. I., Walker, E., Lu, Y., Santos, O. C., & Isotani, S. (eds) **Artificial Intelligence in Education. AIED 2025.**  
-   *Lecture Notes in Computer Science* (Vol. 15877). Springer, Cham.  
-   [_arXiv:2503.06424_](https://arxiv.org/abs/2503.06424)
+   ```powershell
+   conda env create -f environment.yml
+   conda activate rlhf
+   python -m ipykernel install --user --name rlhf --display-name rlhf
+   ```
 
-7. **Wei, S., Zhang, M., Lin, X., Jiang, B., Kuang, K., & Dai, Z. (2025).**  
-   *UCO: A Multi-Turn Interactive Reinforcement Learning Method for Adaptive Teaching with Large Language Models.*  
-   [_arXiv:2511.08873_](https://arxiv.org/abs/2511.08873)
+2. Copy `secrets/openai.env.example` to `secrets/openai.env` and add your own
+   `OPENAI_API_KEY`. Never commit the populated file.
 
-8. **Memarian, B., & Doleck, T. (2024).**  
-   *A scoping review of reinforcement learning in education.*  
-   *Computers and Education: Open*, 100175.  
-   [_https://doi.org/10.1016/j.caeo.2024.100175_](https://doi.org/10.1016/j.caeo.2024.100175)
+3. Run the offline test suite:
 
-## Resources
-- https://github.com/eth-lre/PedagogicalRL
+   ```powershell
+   pytest -q
+   ```
 
-**1. Textbook**  
-- *Reinforcement Learning: An Introduction (Sutton & Barto)*  
-  http://incompleteideas.net/book/the-book-2nd.html
+4. Review `configs/paper_reproduction.toml`. Use a new `run_id` for a logically
+   separate run.
 
-**2. Stanford CS234 — RL Course Syllabus**  
-- https://web.stanford.edu/class/cs234/
+5. Open `reproduce_experiment.ipynb`, select the `rlhf` kernel, and execute the
+   setup and status cells. The live-run cell is guarded by
+   `CONFIRM_LIVE_API_RUN = False`.
 
-**3. Stanford CS234 — Lecture Playlist (YouTube)**  
-- https://youtube.com/playlist?list=PLoROMvodv4rN4wG6Nk6sNpTEbuOSosZdX
+The notebook runs one problem at a time by default, checkpoints after every
+turn, and supports explicit retry and skip decisions. See
+[`docs/EXPERIMENT.md`](docs/EXPERIMENT.md) for the full protocol.
+
+## Repository map
+
+| Location | Purpose |
+|---|---|
+| `reproduce_experiment.ipynb` | Supported supervised experiment entry point |
+| `experiment.py` | Episode orchestration, reward calculation, retry/skip interface |
+| `policy.py` | Random-forest reward model and action selection |
+| `evaluation.py` | Bounded generated-code evaluation |
+| `agents.py`, `prompts/` | LLM roles, structured outputs, and exact prompts |
+| `data/experiment_problems_2000*` | Tracked ordered problem snapshot and provenance |
+| `results_visualization.ipynb` | Historical analysis used for the submitted paper |
+| `agents_and_training.ipynb` | Historical exploratory development notebook |
+| `outputs/20260315_gpt_4_1_beginner_test2/` | Submitted paper-run artifacts |
+
+## What “the paper run” means
+
+The submitted result is one sequential online run. The reward model was updated
+as transitions accumulated; it was not an epoch over a conventional fixed
+training set, and no held-out evaluation was performed.
+
+- 200 programming problems were scheduled.
+- 196 interaction JSON files were saved.
+- 190 problem IDs contributed numeric transitions.
+- 636 state-action transitions were logged.
+- Problems 102, 126, 181, and 182 were manually skipped after non-terminating
+  behavior.
+
+The reproduction snapshot contains 2,000 ordered problems. Indices 0-199 are the
+exact inputs scheduled in the paper run; 200-1999 support optional extensions.
+The fresh reproduction configuration attempts all 200 scheduled inputs because
+generated-code evaluation is now bounded by a child-process timeout.
+
+## Reproducibility boundaries
+
+- New runs record resolved configuration, Git commit, prompt hashes, package
+  versions, dataset hashes, and attempt events.
+- Random-forest and action-sampling seeds are explicit.
+- The original experiment used moving OpenAI model aliases and did not pin every
+  provider generation setting. Exact language-model outputs therefore cannot be
+  guaranteed even with identical local code and data.
+- Code evaluation runs in a child process with a timeout so an infinite loop
+  cannot freeze the notebook. This is a reliability boundary, **not a security
+  sandbox**; generated code remains untrusted.
+- The reward formula is preserved as implemented, including its known choice to
+  use the current code score when the score changes rather than the score delta.
+
+## Data attribution
+
+The problem snapshot is derived from
+[newfacade/LeetCodeDataset](https://huggingface.co/datasets/newfacade/LeetCodeDataset),
+licensed Apache-2.0. See `data/README.md` and the tracked provenance JSON for the
+source and content hashes.

@@ -1,3 +1,5 @@
+"""LLM agent wrappers used by the simulated tutoring environment."""
+
 from pprint import pprint
 from pydantic import BaseModel, Field
 from langchain.agents import create_agent
@@ -9,10 +11,20 @@ from langchain_openai import ChatOpenAI
 MODEL_STUDENT = "gpt-4.1-mini"
 MODEL_GENERAL = "gpt-4.1"
 
-## BASE CLASS
 class MyAgent:
-    def __init__(self, system_message: str):
+    """Stateful LangChain agent with an inspectable conversation history."""
+
+    def __init__(
+        self,
+        system_message: str,
+        model_name: str = MODEL_GENERAL,
+        request_timeout_seconds: float = 120.0,
+        max_retries: int = 2,
+    ):
         self.system_message = system_message
+        self.model_name = model_name
+        self.request_timeout_seconds = request_timeout_seconds
+        self.max_retries = max_retries
         self.agent = self._agent_constructor()
         self.reset_conversation()
     
@@ -25,47 +37,50 @@ class MyAgent:
         self.system_message = system_message
         self.conversation_history[0] = SystemMessage(content=self.system_message)
 
-    def invoke(self, message:HumanMessage) -> AIMessage:
+    def invoke(self, message: HumanMessage) -> AIMessage:
         self.conversation_history.append(message)
         try:
             response = self.agent.invoke({"messages": self.conversation_history})
             self.conversation_history = response["messages"]  # Update conversation history with the agent's response
-        except Exception as e:
-            # error invoking agent. Log the error and raise an exception
-            raise Exception(f"Error invoking agent: {e}")
+        except Exception as error:
+            raise RuntimeError(f"Error invoking {self.model_name}: {error}") from error
         
         return self._get_final_message(response)
 
-    def invoke_pprint(self, message:HumanMessage) -> AIMessage:
+    def invoke_pprint(self, message: HumanMessage) -> AIMessage:
         out = self.invoke(message=message)
         pprint(out.content)
         return out
 
-    def _get_final_message(self, response: dict) -> AIMessage: # Edit: Makes easier to detect errors in case the output is not as expected. 
+    def _get_final_message(self, response: dict) -> AIMessage:
         """
         Extract the final user-facing AI response from a LangChain-style run output.
         Safely skips tool-call placeholders and returns the last meaningful AIMessage.
         """
         
-        last_respose_message = response["messages"][-1]
-        if isinstance(last_respose_message, AIMessage) and last_respose_message.content:
-            return last_respose_message
-        raise ValueError("No final AIMessage with content found in response. Last message:", type(last_respose_message), last_respose_message)
+        last_response_message = response["messages"][-1]
+        if isinstance(last_response_message, AIMessage) and last_response_message.content:
+            return last_response_message
+        raise ValueError(
+            "No final AIMessage with content found in response. "
+            f"Last message type: {type(last_response_message).__name__}"
+        )
 
     def _agent_constructor(self):
-        agent_student = create_agent(
-            model=MODEL_GENERAL,
-            tools=None,
-            # response_format=StudentOutput,   # <-- structured output
+        model = ChatOpenAI(
+            model=self.model_name,
+            timeout=self.request_timeout_seconds,
+            max_retries=self.max_retries,
         )
-        return agent_student
+        agent = create_agent(
+            model=model,
+            tools=None,
+        )
+        return agent
     
-## TUTORS
 class Tutor(MyAgent):
-    def __init__(self, system_message: str):
-        super().__init__(system_message)
+    """Tutor agent; defaults to the general paper-run model."""
 
-## STUDENTS
 class StudentOutput(BaseModel):
     """Student structured output"""
     conversation: str = Field(
@@ -76,8 +91,21 @@ class StudentOutput(BaseModel):
     )
 
 class Student(MyAgent):
-    def __init__(self, system_message: str):
-        super().__init__(system_message)
+    """Synthetic student that returns conversation text and current Python code."""
+
+    def __init__(
+        self,
+        system_message: str,
+        model_name: str = MODEL_STUDENT,
+        request_timeout_seconds: float = 120.0,
+        max_retries: int = 2,
+    ):
+        super().__init__(
+            system_message,
+            model_name=model_name,
+            request_timeout_seconds=request_timeout_seconds,
+            max_retries=max_retries,
+        )
 
     def invoke(self, message: AIMessage) -> HumanMessage:
         """
@@ -87,20 +115,24 @@ class Student(MyAgent):
         ai_response = super(Student, self).invoke(HumanMessage(content=message.content))
         return HumanMessage(content=ai_response.content)
 
-    def invoke_pprint(self, message:AIMessage) -> HumanMessage:
+    def invoke_pprint(self, message: AIMessage) -> HumanMessage:
         out = self.invoke(message=message)
         pprint(out.content)
         return out
 
     def _agent_constructor(self):
+        model = ChatOpenAI(
+            model=self.model_name,
+            timeout=self.request_timeout_seconds,
+            max_retries=self.max_retries,
+        )
         agent_student = create_agent(
-            model=MODEL_STUDENT,
+            model=model,
             tools=None,
-            response_format=StudentOutput,   # <-- structured output
+            response_format=StudentOutput,
         )
         return agent_student
 
-## JUDGE STUDENT
 class StudentJudgeOutput(BaseModel):
     """StudentJudge structured output"""
     student_level_explanation: str = Field(
@@ -116,18 +148,21 @@ class StudentJudgeOutput(BaseModel):
     )
     
 class StudentJudge(MyAgent):
-    def __init__(self, system_message: str):
-        super().__init__(system_message)
+    """Judge for the student's abstraction level and topic consistency."""
 
     def _agent_constructor(self):
+        model = ChatOpenAI(
+            model=self.model_name,
+            timeout=self.request_timeout_seconds,
+            max_retries=self.max_retries,
+        )
         agent_judge = create_agent(
-            model=MODEL_GENERAL,
+            model=model,
             tools=None,
-            response_format=StudentJudgeOutput,   # <-- structured output
+            response_format=StudentJudgeOutput,
         )
         return agent_judge
 
-## JUDGE TUTOR
 class TutorJudgeOutput(BaseModel):
     tutor_level_explanation: str = Field(
         description="Explain why you chose the value for the tutor level field."
@@ -145,8 +180,7 @@ class TutorJudgeOutput(BaseModel):
     )
 
 class TutorJudge(MyAgent):
-    def __init__(self, system_message: str):
-        super().__init__(system_message)
+    """Judge for tutor abstraction and solution leakage."""
 
     def invoke(self, message: AIMessage) -> AIMessage:
         """
@@ -156,15 +190,20 @@ class TutorJudge(MyAgent):
         ai_response = super().invoke(HumanMessage(content=message.content))
         return ai_response
 
-    def invoke_pprint(self, message:AIMessage) -> AIMessage:
+    def invoke_pprint(self, message: AIMessage) -> AIMessage:
         out = self.invoke(message=message)
         pprint(out.content)
         return out
 
     def _agent_constructor(self):
+        model = ChatOpenAI(
+            model=self.model_name,
+            timeout=self.request_timeout_seconds,
+            max_retries=self.max_retries,
+        )
         agent_judge = create_agent(
-            model=MODEL_GENERAL,
+            model=model,
             tools=None,
-            response_format=TutorJudgeOutput,   # <-- structured output
+            response_format=TutorJudgeOutput,
         )
         return agent_judge
