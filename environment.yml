@@ -1,23 +1,11 @@
 name: rlhf
 channels:
-  - pytorch
-  - nvidia
   - conda-forge
   - defaults
 
 dependencies:
-  # ---- Core Python ----
   - python=3.12
-  - pip>=23.0
-
- # ---- Pip packages ----
+  - pip>=23
   - pip:
-      - torch 
-      - torchvision
-      # Jupyter kernel support
-      - ipykernel
-      # LLM training + RLHF
-      - transformers
-      - datasets
-      # HuggingFace
-      - huggingface_hub
+      # Keep one dependency list so conda and pip installations do not drift.
+      - -r requirements.txt

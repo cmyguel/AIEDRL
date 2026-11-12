@@ -1,0 +1,45 @@
+# Configuration matching the scientific behavior of the submitted paper run.
+# Change run_id before beginning a logically separate replication.
+
+[run]
+run_id = "paper_reproduction"
+problem_start = 0
+problem_stop = 200
+default_batch_size = 1
+# A fresh reproduction attempts all 200 scheduled problems. Add an ID here only
+# when an operator deliberately decides to omit it; the decision is logged.
+skip_problem_ids = []
+student_programming_level = "beginner"
+
+[models]
+tutor = "gpt-4.1"
+student = "gpt-4.1-mini"
+student_judge = "gpt-4.1"
+tutor_judge = "gpt-4.1"
+request_timeout_seconds = 120.0
+max_retries = 2
+
+[policy]
+actions = ["SOCRATIC_PROBE", "CONCEPTUAL_HINT", "STRUCTURAL_SCAFFOLD"]
+random_seed = 42
+forest_estimators = 200
+min_rows_before_training = 10
+retrain_every = 3
+epsilon = 0.1
+initial_temperature = 2.0
+temperature_decay_fraction = 0.6
+
+[reward]
+pedagogical_weight = 0.3
+code_runs_bonus = 0.1
+repeated_action_penalty = -0.1
+
+[evaluation]
+code_timeout_seconds = 10.0
+max_turns = 10
+
+[paths]
+dataset = "data/experiment_problems_2000.jsonl.gz"
+manifest = "data/experiment_problems_2000_manifest.csv"
+output_root = "outputs"
+secrets_file = "secrets/openai.env"
